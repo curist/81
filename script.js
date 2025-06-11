@@ -187,13 +187,20 @@ document.addEventListener("click", (e) => {
   $num.dispatchEvent(new Event("input"));
 });
 
+$num.addEventListener("input", () => {
+  localStorage.setItem("num", $num.value);
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  $num.value = localStorage.getItem("num") || "100";
+  render();
+
+  $num.focus();
+  $num.select();
+});
+
 document
   .querySelectorAll("input")
   .forEach((el) => el.addEventListener("input", render));
 
 render();
-
-document.addEventListener("DOMContentLoaded", () => {
-  $num.focus();
-  $num.select();
-});
