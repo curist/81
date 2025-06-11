@@ -192,3 +192,8 @@ document
   .forEach((el) => el.addEventListener("input", render));
 
 render();
+
+document.addEventListener("DOMContentLoaded", () => {
+  $num.focus();
+  $num.select();
+});
