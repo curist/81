@@ -151,6 +151,20 @@ function render() {
     $tbody.appendChild(row);
   }
 }
+$num.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  let newNum = parseInt($num.value, 10);
+  if (e.deltaY < 0) {
+    newNum += 3;
+  } else {
+    newNum -= 3;
+  }
+  if (newNum < 0) {
+    newNum = 0;
+  }
+  $num.value = newNum;
+  $num.dispatchEvent(new Event("input"));
+});
 
 document
   .querySelectorAll("input")
