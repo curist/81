@@ -132,37 +132,58 @@ const colorCode = (score) => {
 
 const $num = document.getElementById("checkNumber");
 const $tbody = document.querySelector("#scoreTable tbody");
+const $scoreWheel = document.getElementById("scoreWheel");
 function render() {
   const num = parseInt($num.value, 10) || 0;
   $tbody.innerHTML = "";
+  $scoreWheel.innerHTML = "";
   for (let i = num - 7; i <= num + 7; i++) {
     if (i < 1) continue;
     const row = document.createElement("tr");
     const result = queryFortuneScore(i);
-    row.innerHTML = `<td>${i}</td><td class="sc-${colorCode(
-      result.score,
-    )
-      }">${result.score.toPrecision(3)}</td><td>${result.data.map(({ idx, text, score }) => {
-        return `<div><span class="idx">${idx}</span>` +
-          `<span class="ftext">${text}</span>` +
-          `<span class="score">(${score})</span></div>`;
-      }).join("")
+    const color = colorCode(result.score);
+    row.innerHTML = `<td>${i}</td>
+      <td class="sc-${color}">${result.score.toPrecision(3)}</td>
+      <td>${result.data.map(({ idx, text, score }) => {
+      return `<div><span class="idx">${idx}</span>` +
+        `<span class="ftext">${text}</span>` +
+        `<span class="score">(${score})</span></div>`;
+    }).join("")
       }</td>`;
     $tbody.appendChild(row);
+
+    const wheel = document.createElement("div");
+    wheel.classList.add("wheel");
+    wheel.classList.add(`sc-${color}`);
+    wheel.setAttribute("data-num", i);
+    $scoreWheel.appendChild(wheel);
   }
 }
-$num.addEventListener("wheel", (e) => {
+
+function numberScroller(e) {
   e.preventDefault();
   let newNum = parseInt($num.value, 10);
   if (e.deltaY < 0) {
-    newNum += 3;
-  } else {
     newNum -= 3;
+  } else {
+    newNum += 3;
   }
   if (newNum < 0) {
     newNum = 0;
   }
   $num.value = newNum;
+  $num.dispatchEvent(new Event("input"));
+}
+
+$num.addEventListener("wheel", numberScroller);
+$scoreWheel.addEventListener("wheel", numberScroller);
+
+document.addEventListener("click", (e) => {
+  if (!e.target.matches(".wheel")) {
+    return;
+  }
+  const num = e.target.getAttribute("data-num");
+  $num.value = num;
   $num.dispatchEvent(new Event("input"));
 });
 

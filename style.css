@@ -29,6 +29,18 @@
   color: black;
 }
 
+#scoreWheel {
+  float: right;
+}
+
+.wheel {
+  display: inline-block;
+  height: 12px;
+  width: 8px;
+  cursor: pointer;
+  border: 1px solid #eee;
+}
+
 .idx {
   display: inline-block;
   width: 25px;
