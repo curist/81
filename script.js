@@ -187,20 +187,26 @@ document.addEventListener("click", (e) => {
   $num.dispatchEvent(new Event("input"));
 });
 
-$num.addEventListener("input", () => {
-  localStorage.setItem("num", $num.value);
-});
-
-document.addEventListener("DOMContentLoaded", () => {
-  $num.value = localStorage.getItem("num") || "100";
-  render();
-
-  $num.focus();
-  $num.select();
-});
+document
+  .querySelectorAll("input")
+  .forEach((el) =>
+    el.addEventListener("input", (e) => {
+      localStorage.setItem(e.target.name, e.target.value);
+    })
+  );
 
 document
   .querySelectorAll("input")
   .forEach((el) => el.addEventListener("input", render));
 
-render();
+document.addEventListener("DOMContentLoaded", () => {
+  $num.value = localStorage.getItem("num") || "100";
+  $w80.value = localStorage.getItem("w80") || "1";
+  $w81.value = localStorage.getItem("w81") || "1";
+  $wdigit.value = localStorage.getItem("wdigit") || "1";
+
+  render();
+
+  $num.focus();
+  $num.select();
+});
