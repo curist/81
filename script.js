@@ -200,7 +200,8 @@ document
   .forEach((el) => el.addEventListener("input", render));
 
 document.addEventListener("DOMContentLoaded", () => {
-  $num.value = localStorage.getItem("num") || "100";
+  const params = new URLSearchParams(window.location.search);
+  $num.value = params.get('n') || localStorage.getItem("num") || "100";
   $w80.value = localStorage.getItem("w80") || "1";
   $w81.value = localStorage.getItem("w81") || "1";
   $wdigit.value = localStorage.getItem("wdigit") || "1";
