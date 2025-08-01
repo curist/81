@@ -142,6 +142,9 @@ function render() {
     const row = document.createElement("tr");
     const result = queryFortuneScore(i);
     const color = colorCode(result.score);
+    if (i == num) {
+      row.classList.add("target");
+    }
     row.innerHTML = `<td>${i}</td>
       <td class="sc-${color}">${result.score.toPrecision(3)}</td>
       <td>${result.data.map(({ idx, text, score }) => {

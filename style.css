@@ -12,9 +12,6 @@
   background-color: #f2f2f2;
 }
 
-.sc {
-  font-weight: bold;
-}
 .sc-green {
   background-color: #47cf73;
 }
@@ -58,4 +55,12 @@
 .score {
   color: #999;
   font-size: 0.8em;
+}
+
+tr td:first-child {
+  font-weight: 200;
+}
+tr.target td:first-child {
+  font-weight: bold;
+  color: #331;
 }
