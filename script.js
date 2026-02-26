@@ -1,3 +1,5 @@
+// --- Drop-in replacement: script.js ---
+
 const fortuneData = {
   1: { score: 10, text: "繁榮發達，信用得固，萬人仰望，可獲成功。" },
   2: { score: 2, text: "動搖不安，一榮一枯，一盛一衰，勞而無功。" },
@@ -92,36 +94,144 @@ const map80 = (number) => {
   return number || 80;
 };
 
-const mapDigits = (number) =>
-  ("" + number)
+// Digit sum -> map into 1..81 domain so fortuneData always exists.
+const sumDigits = (number) =>
+  String(Math.abs(number))
     .split("")
-    .map((n) => parseInt(n, 10))
-    .reduce((a, b) => a + b);
+    .reduce((a, ch) => a + (ch >= "0" && ch <= "9" ? ch.charCodeAt(0) - 48 : 0), 0);
+
+const mapDigits = (number) => map81(sumDigits(number));
 
 const $w81 = document.getElementById("weight81");
 const $w80 = document.getElementById("weight80");
 const $wdigit = document.getElementById("weightDigits");
+const $onlyGood = document.getElementById("onlyGood"); // requires checkbox in HTML
+
+const GOOD_THRESHOLD = 9.0;
+
+// Cache to keep "good mode" scanning snappy
+const _fortuneCache = new Map();
 function queryFortuneScore(number) {
+  const key = `${number}|${$w81.value}|${$w80.value}|${$wdigit.value}`;
+  if (_fortuneCache.has(key)) return _fortuneCache.get(key);
+
   const weight81 = parseFloat($w81.value) || 0;
   const weight80 = parseFloat($w80.value) || 0;
   const weightDigits = parseFloat($wdigit.value) || 0;
 
+  const wsum = weight81 + weight80 + weightDigits;
+  if (wsum <= 0) {
+    const r = { score: 0, data: [] };
+    _fortuneCache.set(key, r);
+    return r;
+  }
+
+  const i81 = map81(number);
+  const i80 = map80(number);
+  const idg = mapDigits(number);
+
+  const d81 = fortuneData[i81];
+  const d80 = fortuneData[i80];
+  const ddg = fortuneData[idg];
+
   let score = 0;
-  score += fortuneData[map81(number)].score * weight81;
-  score += fortuneData[map80(number)].score * weight80;
-  score += fortuneData[mapDigits(number)].score * weightDigits;
-  score /= weight81 + weight80 + weightDigits;
+  score += d81.score * weight81;
+  score += d80.score * weight80;
+  score += ddg.score * weightDigits;
+  score /= wsum;
+
   const data = [];
-  const w81data = { idx: map81(number), ...fortuneData[map81(number)] };
-  if (weight81 > 0) data.push(w81data);
-  const w80data = { idx: map80(number), ...fortuneData[map80(number)] };
-  if (weight80 > 0) data.push(w80data);
-  const digitdata = {
-    idx: mapDigits(number),
-    ...fortuneData[mapDigits(number)],
-  };
-  if (weightDigits > 0) data.push(digitdata);
-  return { score, data };
+  if (weight81 > 0) data.push({ idx: i81, ...d81 });
+  if (weight80 > 0) data.push({ idx: i80, ...d80 });
+  if (weightDigits > 0) data.push({ idx: idg, ...ddg });
+
+  const r = { score, data };
+  _fortuneCache.set(key, r);
+  return r;
+}
+
+function clearCache() {
+  _fortuneCache.clear();
+}
+
+function isGoodNumber(n) {
+  return queryFortuneScore(n).score >= GOOD_THRESHOLD;
+}
+
+function nextGood(n) {
+  let i = Math.max(1, n + 1);
+  while (!isGoodNumber(i)) i++;
+  return i;
+}
+
+function prevGood(n) {
+  let i = Math.max(1, n - 1);
+  while (i > 1 && !isGoodNumber(i)) i--;
+  return isGoodNumber(i) ? i : 1;
+}
+
+/**
+ * Number list builder:
+ * - Normal mode: [n-7..n+7]
+ * - Good mode: 15 rows total if possible:
+ *   includes target n (even if not good) + nearby good numbers around it.
+ */
+function buildNumberList(n) {
+  const onlyGood = !!($onlyGood && $onlyGood.checked);
+
+  if (!onlyGood) {
+    const out = [];
+    for (let i = n - 7; i <= n + 7; i++) {
+      if (i >= 1) out.push(i);
+    }
+    return out;
+  }
+
+  const out = [n];
+
+  let low = n - 1;
+  let high = n + 1;
+
+  let gotBelow = 0;
+  let gotAbove = 0;
+
+  // Try to collect up to 7 good below and 7 good above
+  while ((gotBelow < 7 || gotAbove < 7) && out.length < 15) {
+    if (gotBelow < 7) {
+      while (low >= 1 && !isGoodNumber(low)) low--;
+      if (low >= 1) {
+        out.unshift(low);
+        gotBelow++;
+        low--;
+      } else {
+        gotBelow = 7; // no more below
+      }
+    }
+
+    if (out.length >= 15) break;
+
+    if (gotAbove < 7) {
+      while (!isGoodNumber(high)) high++;
+      out.push(high);
+      gotAbove++;
+      high++;
+    }
+  }
+
+  // If still short (e.g., no more below), fill remaining from above (or vice versa)
+  while (out.length < 15) {
+    while (low >= 1 && !isGoodNumber(low)) low--;
+    if (low >= 1) {
+      out.unshift(low);
+      low--;
+      continue;
+    }
+    while (!isGoodNumber(high)) high++;
+    out.push(high);
+    high++;
+  }
+
+  return out;
 }
 
 const colorCode = (score) => {
@@ -133,26 +243,36 @@ const colorCode = (score) => {
 const $num = document.getElementById("checkNumber");
 const $tbody = document.querySelector("#scoreTable tbody");
 const $scoreWheel = document.getElementById("scoreWheel");
+
 function render() {
   const num = parseInt($num.value, 10) || 0;
+
   $tbody.innerHTML = "";
   $scoreWheel.innerHTML = "";
-  for (let i = num - 7; i <= num + 7; i++) {
+
+  const numbers = buildNumberList(num);
+
+  for (const i of numbers) {
     if (i < 1) continue;
+
     const row = document.createElement("tr");
     const result = queryFortuneScore(i);
     const color = colorCode(result.score);
-    if (i == num) {
-      row.classList.add("target");
-    }
+
+    if (i == num) row.classList.add("target");
+
     row.innerHTML = `<td>${i}</td>
       <td class="sc-${color}">${result.score.toPrecision(3)}</td>
-      <td>${result.data.map(({ idx, text, score }) => {
-      return `<div><span class="idx">${idx}</span>` +
-        `<span class="ftext">${text}</span>` +
-        `<span class="score">(${score})</span></div>`;
-    }).join("")
-      }</td>`;
+      <td>${result.data
+        .map(({ idx, text, score }) => {
+          return (
+            `<div><span class="idx">${idx}</span>` +
+            `<span class="ftext">${text}</span>` +
+            `<span class="score">(${score})</span></div>`
+          );
+        })
+        .join("")}</td>`;
+
     $tbody.appendChild(row);
 
     const wheel = document.createElement("div");
@@ -165,15 +285,28 @@ function render() {
 
 function numberScroller(e) {
   e.preventDefault();
-  let newNum = parseInt($num.value, 10);
-  if (e.deltaY < 0) {
-    newNum -= 3;
+
+  let current = parseInt($num.value, 10) || 0;
+  if (current < 1) current = 1;
+
+  let newNum = current;
+
+  const onlyGood = !!($onlyGood && $onlyGood.checked);
+
+  if (onlyGood) {
+    if (e.deltaY < 0) {
+      // scroll up -> previous good number
+      newNum = isGoodNumber(current) ? prevGood(current) : prevGood(current + 1);
+    } else {
+      // scroll down -> next good number
+      newNum = isGoodNumber(current) ? nextGood(current) : nextGood(current - 1);
+    }
   } else {
-    newNum += 3;
+    if (e.deltaY < 0) newNum -= 3;
+    else newNum += 3;
+    if (newNum < 0) newNum = 0;
   }
-  if (newNum < 0) {
-    newNum = 0;
-  }
+
   $num.value = newNum;
   $num.dispatchEvent(new Event("input"));
 }
@@ -182,33 +315,42 @@ $num.addEventListener("wheel", numberScroller);
 $scoreWheel.addEventListener("wheel", numberScroller);
 
 document.addEventListener("click", (e) => {
-  if (!e.target.matches(".wheel")) {
-    return;
-  }
+  if (!e.target.matches(".wheel")) return;
   const num = e.target.getAttribute("data-num");
   $num.value = num;
   $num.dispatchEvent(new Event("input"));
 });
 
-document
-  .querySelectorAll("input")
-  .forEach((el) =>
-    el.addEventListener("input", (e) => {
-      localStorage.setItem(e.target.name, e.target.value);
-    })
-  );
+// Persist all inputs (including checkbox) to localStorage
+document.querySelectorAll("input").forEach((el) =>
+  el.addEventListener("input", (e) => {
+    const t = e.target;
+    const v = t.type === "checkbox" ? String(t.checked) : t.value;
+    localStorage.setItem(t.name, v);
+  })
+);
 
-document
-  .querySelectorAll("input")
-  .forEach((el) => el.addEventListener("input", render));
+// On any input change, clear cache (weights/checkbox change scoring/selection) and re-render
+document.querySelectorAll("input").forEach((el) =>
+  el.addEventListener("input", () => {
+    clearCache();
+    render();
+  })
+);
 
 document.addEventListener("DOMContentLoaded", () => {
   const params = new URLSearchParams(window.location.search);
-  $num.value = params.get('n') || localStorage.getItem("num") || "100";
+
+  $num.value = params.get("n") || localStorage.getItem("num") || "100";
   $w80.value = localStorage.getItem("w80") || "1";
   $w81.value = localStorage.getItem("w81") || "1";
   $wdigit.value = localStorage.getItem("wdigit") || "1";
 
+  if ($onlyGood) {
+    $onlyGood.checked = (localStorage.getItem("onlyGood") || "false") === "true";
+  }
+
+  clearCache();
   render();
 
   $num.focus();
