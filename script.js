@@ -243,12 +243,16 @@ const colorCode = (score) => {
 const $num = document.getElementById("checkNumber");
 const $tbody = document.querySelector("#scoreTable tbody");
 const $scoreWheel = document.getElementById("scoreWheel");
+const $checkScore = document.getElementById("checkScore");
 
 function render() {
   const num = parseInt($num.value, 10) || 0;
 
   $tbody.innerHTML = "";
   $scoreWheel.innerHTML = "";
+
+  const checkResult = queryFortuneScore(num);
+  $checkScore.textContent = parseFloat(checkResult.score.toFixed(1));
 
   const numbers = buildNumberList(num);
 
