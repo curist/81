@@ -325,12 +325,22 @@ document.addEventListener("click", (e) => {
   $num.dispatchEvent(new Event("input"));
 });
 
+function syncNumberToUrl(value) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("n", value);
+  window.history.replaceState(null, "", url);
+}
+
 // Persist all inputs (including checkbox) to localStorage
 document.querySelectorAll("input").forEach((el) =>
   el.addEventListener("input", (e) => {
     const t = e.target;
     const v = t.type === "checkbox" ? String(t.checked) : t.value;
     localStorage.setItem(t.name, v);
+
+    if (t === $num) {
+      syncNumberToUrl(v);
+    }
   })
 );
 
@@ -346,6 +356,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const params = new URLSearchParams(window.location.search);
 
   $num.value = params.get("n") || localStorage.getItem("num") || "100";
+  syncNumberToUrl($num.value);
   $w80.value = localStorage.getItem("w80") || "1";
   $w81.value = localStorage.getItem("w81") || "1";
   $wdigit.value = localStorage.getItem("wdigit") || "1";
